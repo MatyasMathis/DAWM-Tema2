@@ -1,11 +1,13 @@
 ﻿using Core.Dtos;
 using Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Project.Controllers
 {
     [ApiController]
     [Route("api/auth")]
+    [Authorize]
     public class AuthController : Controller
     {
         private UserService _userService;
@@ -16,9 +18,10 @@ namespace Project.Controllers
         }
 
         [HttpPost("/register/Student")]
+        [AllowAnonymous]
         public IActionResult AddStudentUser(UserAddDto payload)
         {
-            var result = _userService.AddStudent(payload);
+            var result = _userService.RegisterStudent(payload);
 
             if (result == null)
             {
@@ -29,9 +32,10 @@ namespace Project.Controllers
         }
 
         [HttpPost("/register/Professor")]
+        [AllowAnonymous]
         public IActionResult AddProfessorUser(UserAddDto payload)
         {
-            var result = _userService.AddProfessor(payload);
+            var result = _userService.RegisterProfessor(payload);
 
             if (result == null)
             {
@@ -47,6 +51,15 @@ namespace Project.Controllers
             var result = _userService.GetAll();
 
             return Ok(result);
+        }
+
+        [HttpPost("/login")]
+        [AllowAnonymous]
+        public IActionResult Login(UserAddDto payload)
+        {
+            var jwtToken = _userService.Validate(payload);
+
+            return Ok(new { token = jwtToken });
         }
     }
 }

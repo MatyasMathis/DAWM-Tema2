@@ -7,14 +7,16 @@ namespace Core.Services
     public class UserService
     {
         private readonly UnitOfWork unitOfWork;
+        private AuthorizationService authService { get; set; }
 
-        public UserService(UnitOfWork unitOfWork)
+        public UserService(UnitOfWork unitOfWork, AuthorizationService authService)
         {
             this.unitOfWork = unitOfWork;
+            this.authService = authService;
         }
 
 
-        public UserAddDto AddStudent(UserAddDto payload)
+        public UserAddDto RegisterStudent(UserAddDto payload)
         {
             if (payload == null) return null;
 
@@ -23,24 +25,26 @@ namespace Core.Services
 
             if (hasNameConflict) return null;
 
-            var newUser = new User
+            var hashedPassword = authService.HashPassword(payload.Password);
+
+            var user = new User
             {
+                Password = hashedPassword,
                 UserName = payload.UserName,
-                Password=payload.Password,
                 Role = new Role
                 {
-                    Id = 2,
-                    Description = "Student"
+                    Id = 1,
+                    Description="Student"
                 }
             };
 
-            unitOfWork.Users.Insert(newUser);
+            unitOfWork.Users.Insert(user);
             unitOfWork.SaveChanges();
 
             return payload;
         }
 
-        public UserAddDto AddProfessor(UserAddDto payload)
+        public UserAddDto RegisterProfessor(UserAddDto payload)
         {
             if (payload == null) return null;
 
@@ -49,18 +53,20 @@ namespace Core.Services
 
             if (hasNameConflict) return null;
 
-            var newUser = new User
+            var hashedPassword = authService.HashPassword(payload.Password);
+
+            var user = new User
             {
+                Password = hashedPassword,
                 UserName = payload.UserName,
-                Password = payload.Password,
                 Role = new Role
                 {
-                    Id = 1,
+                    Id = 2,
                     Description = "Professor"
                 }
             };
 
-            unitOfWork.Users.Insert(newUser);
+            unitOfWork.Users.Insert(user);
             unitOfWork.SaveChanges();
 
             return payload;
@@ -76,6 +82,30 @@ namespace Core.Services
                 UserName= c.UserName,
                 Password= c.Password
             }).ToList();
+        }
+
+        public string GetRole(User user)
+        {
+            return user.Role.Description;
+        }
+
+        public string Validate(UserAddDto payload)
+        {
+            var user = unitOfWork.Users.GetByUsername(payload.UserName);
+
+            var passwordFine = authService.VerifyHashedPassword(user.Password, payload.Password);
+
+            if (passwordFine)
+            {
+                var role = GetRole(user);
+
+                return authService.GetToken(user, role);
+            }
+            else
+            {
+                return null;
+            }
+
         }
     }
 }
